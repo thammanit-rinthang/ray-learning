@@ -18,15 +18,22 @@ MCP (Model Context Protocol) Server สำหรับให้ **AI Agents** (�
 
 ## 🚀 วิธีตั้งค่าใน AI Agents
 
-### 1. ตั้งค่าใน Antigravity CLI / IDE (`~/.gemini/antigravity.json` หรือ Agent Config)
+### 1. Build ไฟล์ MCP ให้พร้อมใช้งาน (รันคำสั่งนี้ครั้งแรก):
+```bash
+npm run build:mcp
+```
+
+---
+
+### 2. ตั้งค่าใน Antigravity CLI / IDE (`~/.gemini/antigravity-cli/mcp/ray-learning-admin.json` หรือ Agent Config)
 ```json
 {
   "mcpServers": {
     "ray-learning-admin": {
-      "command": "npx",
-      "args": ["-y", "tsx", "D:/projects/Bot-Learning/report-viewer/mcp-server/index.ts"],
+      "command": "node",
+      "args": ["D:/projects/Bot-Learning/report-viewer/mcp-server/dist/index.mjs"],
       "env": {
-        "DATABASE_URL": "postgresql://...",
+        "DATABASE_URL": "postgresql://postgres.[ref]:[pass]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true",
         "NEXT_PUBLIC_SUPABASE_URL": "https://xxx.supabase.co",
         "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOi...",
         "SUPABASE_REPORT_BUCKET": "lesson-reports"
@@ -36,18 +43,15 @@ MCP (Model Context Protocol) Server สำหรับให้ **AI Agents** (�
 }
 ```
 
-### 2. ตั้งค่าใน Claude Desktop (`claude_desktop_config.json`)
+### 3. ตั้งค่าใน Claude Desktop (`claude_desktop_config.json`)
 ```json
 {
   "mcpServers": {
     "ray-learning-admin": {
-      "command": "cmd.exe",
-      "args": [
-        "/c",
-        "npx tsx D:\\projects\\Bot-Learning\\report-viewer\\mcp-server\\index.ts"
-      ],
+      "command": "node",
+      "args": ["D:/projects/Bot-Learning/report-viewer/mcp-server/dist/index.mjs"],
       "env": {
-        "DATABASE_URL": "postgresql://...",
+        "DATABASE_URL": "postgresql://postgres.[ref]:[pass]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true",
         "NEXT_PUBLIC_SUPABASE_URL": "https://xxx.supabase.co",
         "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOi...",
         "SUPABASE_REPORT_BUCKET": "lesson-reports"
@@ -57,13 +61,13 @@ MCP (Model Context Protocol) Server สำหรับให้ **AI Agents** (�
 }
 ```
 
-### 3. ตั้งค่าใน Cursor (`.cursor/mcp.json`)
+### 4. ตั้งค่าใน Cursor (`.cursor/mcp.json`)
 ```json
 {
   "mcpServers": {
     "ray-learning-admin": {
-      "command": "npx",
-      "args": ["tsx", "mcp-server/index.ts"]
+      "command": "node",
+      "args": ["mcp-server/dist/index.mjs"]
     }
   }
 }

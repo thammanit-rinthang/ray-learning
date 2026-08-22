@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import crypto from "node:crypto";
 import path from "node:path";
-import dotenv from "dotenv";
+import fs from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -14,10 +14,39 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import * as schema from "../lib/db/schema.js";
 
-// Load environment variables from parent .env or current .env
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
-dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+// Silent env loader (no stdout logs)
+function loadEnvFile(filePath: string) {
+  try {
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx !== -1) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          let val = trimmed.slice(eqIdx + 1).trim();
+          if (
+            (val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))
+          ) {
+            val = val.slice(1, -1);
+          }
+          if (process.env[key] === undefined) {
+            process.env[key] = val;
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignore error
+  }
+}
 
+loadEnvFile(path.resolve(process.cwd(), ".env"));
+loadEnvFile(path.resolve(process.cwd(), ".env.local"));
+
+// Credentials
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -27,10 +56,6 @@ const supabaseKey =
 
 const connectionString = process.env.DATABASE_URL;
 const bucketName = process.env.SUPABASE_REPORT_BUCKET || "lesson-reports";
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Warning: Supabase credentials are not fully configured in environment.");
-}
 
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 const client = connectionString ? postgres(connectionString, { prepare: false, max: 2 }) : null;
@@ -547,7 +572,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Ray Learning Admin MCP Server running on stdio");
 }
 
 main().catch((error) => {

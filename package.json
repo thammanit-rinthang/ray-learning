@@ -11,7 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "sync:reports": "tsx scripts/sync-reports.ts",
-    "mcp": "tsx mcp-server/index.ts"
+    "build:mcp": "esbuild mcp-server/index.ts --bundle --platform=node --format=esm --packages=external --outfile=mcp-server/dist/index.mjs",
+    "mcp": "node mcp-server/dist/index.mjs"
   },
   "dependencies": {
     "@google/genai": "latest",
@@ -35,6 +36,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "drizzle-kit": "latest",
+    "esbuild": "^0.28.2",
     "eslint": "latest",
     "eslint-config-next": "16.3.2",
     "tsx": "latest",
