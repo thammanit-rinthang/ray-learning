@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireUser() {
+export const requireUser = cache(async () => {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (userData?.user) {
@@ -11,9 +12,9 @@ export async function requireUser() {
   const user = claimsData?.claims;
   if (!user?.sub) redirect("/login");
   return { id: String(user.sub), email: typeof user.email === "string" ? user.email : "" };
-}
+});
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   try {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
@@ -29,4 +30,5 @@ export async function getCurrentUser() {
   } catch {
     return null;
   }
-}
+});
+

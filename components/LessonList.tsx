@@ -14,6 +14,9 @@ import {
   FolderTree,
   List,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
   X,
 } from "lucide-react";
 import type { ReportIndexItem } from "@/lib/reports";
@@ -26,6 +29,7 @@ export function LessonList({ initialReports }: LessonListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
+  const [collapsedCourses, setCollapsedCourses] = useState<Record<string, boolean>>({});
 
   const courses = useMemo(() => {
     const set = new Set<string>();
@@ -64,6 +68,30 @@ export function LessonList({ initialReports }: LessonListProps) {
       items,
     }));
   }, [filteredReports]);
+
+  function toggleCourse(courseName: string) {
+    setCollapsedCourses((prev) => ({
+      ...prev,
+      [courseName]: !prev[courseName],
+    }));
+  }
+
+  function expandAll() {
+    setCollapsedCourses({});
+  }
+
+  function collapseAll() {
+    const allCollapsed: Record<string, boolean> = {};
+    groupedCourses.forEach((g) => {
+      allCollapsed[g.courseName] = true;
+    });
+    setCollapsedCourses(allCollapsed);
+  }
+
+  const allAreCollapsed = useMemo(() => {
+    if (groupedCourses.length === 0) return false;
+    return groupedCourses.every((g) => collapsedCourses[g.courseName]);
+  }, [groupedCourses, collapsedCourses]);
 
   function renderLessonCard(report: ReportIndexItem) {
     return (
@@ -241,8 +269,19 @@ export function LessonList({ initialReports }: LessonListProps) {
           </div>
         </div>
 
-        {/* Course Filter Pills */}
-        {courses.length > 1 && (
+        {/* Course Filter Pills & Accordion Controls */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "var(--space-md)",
+            flexWrap: "wrap",
+            borderTop: "1px solid var(--color-border-subtle)",
+            paddingTop: "var(--space-xs)",
+          }}
+        >
+          {/* Filter Pills */}
           <div
             style={{
               display: "flex",
@@ -250,8 +289,7 @@ export function LessonList({ initialReports }: LessonListProps) {
               gap: "var(--space-xs)",
               overflowX: "auto",
               paddingBottom: "2px",
-              borderTop: "1px solid var(--color-border-subtle)",
-              paddingTop: "var(--space-xs)",
+              flex: 1,
             }}
           >
             <button
@@ -272,62 +310,120 @@ export function LessonList({ initialReports }: LessonListProps) {
               </button>
             ))}
           </div>
-        )}
+
+          {/* Expand / Collapse All Controls (Only in grouped mode) */}
+          {viewMode === "grouped" && groupedCourses.length > 1 && (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: "var(--text-xs)", padding: "4px 8px" }}
+                onClick={allAreCollapsed ? expandAll : collapseAll}
+              >
+                <ChevronsUpDown size={14} />
+                <span>{allAreCollapsed ? "เปิดทุกวิชา" : "พับทุกวิชา"}</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Lesson Content: Grouped by Course or Flat */}
+      {/* Lesson Content: Grouped by Course (Accordion) or Flat */}
       {filteredReports.length > 0 ? (
         viewMode === "grouped" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2xl)" }}>
-            {groupedCourses.map((group) => (
-              <section key={group.courseName} style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-                {/* Course Header Banner */}
-                <div
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+            {groupedCourses.map((group) => {
+              const isCollapsed = Boolean(collapsedCourses[group.courseName]);
+
+              return (
+                <section
+                  key={group.courseName}
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "12px 18px",
-                    background: "var(--color-surface-subtle)",
+                    flexDirection: "column",
+                    background: "var(--color-surface)",
                     border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-lg)",
+                    borderRadius: "var(--radius-xl)",
+                    overflow: "hidden",
+                    boxShadow: "var(--shadow-xs)",
+                    transition: "all var(--dur-fast) var(--ease-out)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div
-                      style={{
-                        display: "grid",
-                        placeItems: "center",
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "var(--radius-md)",
-                        background: "var(--color-primary)",
-                        color: "var(--color-primary-text)",
-                      }}
-                    >
-                      <GraduationCap size={18} />
+                  {/* Course Accordion Header (Clickable) */}
+                  <button
+                    type="button"
+                    onClick={() => toggleCourse(group.courseName)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "16px 20px",
+                      background: isCollapsed ? "var(--color-surface)" : "var(--color-surface-subtle)",
+                      border: "none",
+                      borderBottom: isCollapsed ? "none" : "1px solid var(--color-border)",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
+                      transition: "background-color var(--dur-fast)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div
+                        style={{
+                          display: "grid",
+                          placeItems: "center",
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "var(--radius-md)",
+                          background: "var(--color-primary)",
+                          color: "var(--color-primary-text)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <GraduationCap size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.3 }}>
+                          {group.courseName}
+                        </div>
+                        <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "2px" }}>
+                          หลักสูตรรายวิชา · {group.items.length} บทเรียน
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h2 style={{ fontSize: "var(--text-md)", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>
-                        {group.courseName}
-                      </h2>
-                      <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>
-                        หลักสูตรรายวิชา
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span className="badge badge-neutral" style={{ color: "var(--color-pink-text)", borderColor: "var(--color-pink-border)" }}>
+                        {group.items.length} บทเรียน
                       </span>
+                      <div
+                        style={{
+                          display: "grid",
+                          placeItems: "center",
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "50%",
+                          background: "var(--color-surface)",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                      </div>
                     </div>
-                  </div>
+                  </button>
 
-                  <span className="badge badge-neutral" style={{ color: "var(--color-pink-text)", borderColor: "var(--color-pink-border)" }}>
-                    {group.items.length} บทเรียน
-                  </span>
-                </div>
-
-                {/* Course Lessons Grid */}
-                <div className="card-grid">
-                  {group.items.map((report) => renderLessonCard(report))}
-                </div>
-              </section>
-            ))}
+                  {/* Course Lessons Grid (Expandable Body) */}
+                  {!isCollapsed && (
+                    <div style={{ padding: "var(--space-lg)" }}>
+                      <div className="card-grid">
+                        {group.items.map((report) => renderLessonCard(report))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
           </div>
         ) : (
           <div className="card-grid">

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { chatSessions, chatMessages, profiles } from "@/lib/db/schema";
@@ -53,20 +53,28 @@ export async function GET(request: Request) {
       ? allSessions.filter((s) => Array.isArray(s.lessonIds) && s.lessonIds.includes(lessonId))
       : allSessions;
 
-    // Get message counts for these sessions
-    const sessionsWithDetails = await Promise.all(
-      filteredSessions.map(async (session) => {
-        const msgs = await database
-          .select({ id: chatMessages.id })
-          .from(chatMessages)
-          .where(eq(chatMessages.sessionId, session.id));
+    if (filteredSessions.length === 0) {
+      return Response.json([]);
+    }
 
-        return {
-          ...session,
-          messageCount: msgs.length,
-        };
+    // Get message counts in a single fast query
+    const sessionIds = filteredSessions.map((s) => s.id);
+    const msgCounts = await database
+      .select({
+        sessionId: chatMessages.sessionId,
+        count: sql<number>`count(${chatMessages.id})::int`,
       })
-    );
+      .from(chatMessages)
+      .where(inArray(chatMessages.sessionId, sessionIds))
+      .groupBy(chatMessages.sessionId);
+
+    const countMap = new Map<string, number>();
+    msgCounts.forEach((m) => countMap.set(m.sessionId, Number(m.count)));
+
+    const sessionsWithDetails = filteredSessions.map((session) => ({
+      ...session,
+      messageCount: countMap.get(session.id) || 0,
+    }));
 
     return Response.json(sessionsWithDetails);
   } catch (error) {
