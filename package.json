@@ -1,0 +1,43 @@
+{
+  "name": "ray-learning-report-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "sync:reports": "tsx scripts/sync-reports.ts",
+    "mcp": "tsx mcp-server/index.ts"
+  },
+  "dependencies": {
+    "@google/genai": "latest",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "dotenv": "latest",
+    "drizzle-orm": "latest",
+    "lucide-react": "latest",
+    "next": "16.3.2",
+    "openai": "latest",
+    "postgres": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-markdown": "latest",
+    "remark-gfm": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "drizzle-kit": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "16.3.2",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}
