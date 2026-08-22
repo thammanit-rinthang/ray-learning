@@ -1,0 +1,6 @@
+{
+  "name": "ray-learning-mcp-admin",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.mjs"
+}
