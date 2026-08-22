@@ -1,37 +1,37 @@
 :root {
-  /* Color Palette - Pure White Canvas with Soft Pink & Black Theme */
+  /* Color Palette - Crimson & Rose Theme */
   --color-canvas: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-hover: #fff1f5;
-  --color-surface-subtle: #fdf2f7;
-  --color-surface-well: #fce7f1;
+  --color-surface-hover: #fce5e5;
+  --color-surface-subtle: #fce5e5;
+  --color-surface-well: #f7c2c2;
 
-  --color-text-primary: #0a0a0c;
-  --color-text-secondary: #4b5563;
-  --color-text-tertiary: #6b7280;
-  --color-text-muted: #9ca3af;
+  --color-text-primary: #541616;
+  --color-text-secondary: #6e2f2f;
+  --color-text-tertiary: #8c5252;
+  --color-text-muted: #b08080;
   --color-text-inverse: #ffffff;
 
-  --color-border: #f0e2e7;
-  --color-border-subtle: #f9f0f3;
-  --color-border-hover: #f472b6;
-  --color-border-focus: #0a0a0c;
+  --color-border: #f7c2c2;
+  --color-border-subtle: #fce5e5;
+  --color-border-hover: #ff7474;
+  --color-border-focus: #c64242;
 
-  --color-primary: #0a0a0c;
-  --color-primary-hover: #26262a;
-  --color-primary-active: #000000;
+  --color-primary: #c64242;
+  --color-primary-hover: #a83232;
+  --color-primary-active: #541616;
   --color-primary-text: #ffffff;
 
-  /* Soft Pink Palette */
-  --color-pink-soft: #fff1f5;
-  --color-pink-subtle: #fce7f1;
-  --color-pink-border: #fbcfe8;
-  --color-pink-accent: #f472b6;
-  --color-pink-text: #be185d;
-  --color-pink-dark: #831843;
+  /* Theme Palette Tokens (#fce5e5, #f7c2c2, #ff7474, #c64242, #541616) */
+  --color-pink-soft: #fce5e5;
+  --color-pink-subtle: #fce5e5;
+  --color-pink-border: #f7c2c2;
+  --color-pink-accent: #ff7474;
+  --color-pink-text: #c64242;
+  --color-pink-dark: #541616;
 
-  --color-accent-subtle: #fdf2f7;
-  --color-accent-badge: #fce7f1;
+  --color-accent-subtle: #fce5e5;
+  --color-accent-badge: #f7c2c2;
 
   --color-success: #16a34a;
   --color-success-bg: #f0fdf4;

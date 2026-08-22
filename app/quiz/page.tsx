@@ -874,13 +874,13 @@ function QuizContent() {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
                 >
-                  <option value="newest">🕒 ล่าสุด (Newest)</option>
-                  <option value="oldest">⏳ เก่าสุด (Oldest)</option>
-                  <option value="questions_desc">📝 จำนวนข้อ: มาก → น้อย</option>
-                  <option value="questions_asc">📝 จำนวนข้อ: น้อย → มาก</option>
-                  <option value="score_desc">🏆 คะแนนสูงสุด (Best Score)</option>
-                  <option value="attempts_desc">🔥 ทำบ่อยสุด (Most Attempted)</option>
-                  <option value="title_asc">🔤 ชื่อ ก-ฮ (Title A-Z)</option>
+                  <option value="newest">ล่าสุด (Newest)</option>
+                  <option value="oldest">เก่าสุด (Oldest)</option>
+                  <option value="questions_desc">จำนวนข้อ: มาก → น้อย</option>
+                  <option value="questions_asc">จำนวนข้อ: น้อย → มาก</option>
+                  <option value="score_desc">คะแนนสูงสุด (Best Score)</option>
+                  <option value="attempts_desc">ทำบ่อยสุด (Most Attempted)</option>
+                  <option value="title_asc">ชื่อ ก-ฮ (Title A-Z)</option>
                 </select>
               </div>
             </div>
@@ -1356,7 +1356,7 @@ function QuizContent() {
                     }}
                   >
                     <div style={{ fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "4px" }}>
-                      💡 เฉลย: {question.answer}
+                      เฉลย: {question.answer}
                     </div>
                     <p style={{ color: "var(--color-text-secondary)" }}>{question.explanation}</p>
                     {question.sourceSection && (
