@@ -1,13 +1,22 @@
-import { Loader2 } from "lucide-react";
-
 export default function LessonLoading() {
   return (
-    <div className="reading-container">
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)", padding: "var(--space-2xl) 0", alignItems: "center" }}>
-        <Loader2 size={32} style={{ animation: "spin 1s linear infinite", color: "var(--color-primary)" }} />
-        <span style={{ fontSize: "var(--text-sm)", color: "var(--color-text-secondary)", fontWeight: 500 }}>
-          กำลังเปิดเนื้อหาบทเรียน...
-        </span>
+    <div className="reading-container" aria-busy="true" aria-label="กำลังโหลดบทเรียน">
+      <div className="lesson-loading-toolbar">
+        <div className="lesson-loading-heading">
+          <div className="skeleton skeleton-kicker" />
+          <div className="skeleton skeleton-title" />
+        </div>
+        <div className="lesson-loading-actions">
+          <div className="skeleton skeleton-button" />
+          <div className="skeleton skeleton-button" />
+        </div>
+      </div>
+      <div className="lesson-loading-content">
+        <div className="skeleton skeleton-line skeleton-line-wide" />
+        <div className="skeleton skeleton-line" />
+        <div className="skeleton skeleton-line" />
+        <div className="skeleton skeleton-line skeleton-line-short" />
+        <div className="skeleton skeleton-block" />
       </div>
     </div>
   );

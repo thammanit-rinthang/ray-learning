@@ -551,6 +551,52 @@ p.description {
     grid-column: 1 / -1;
   }
 }
+.lesson-loading-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.lesson-loading-heading,
+.lesson-loading-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.lesson-loading-actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.skeleton {
+  display: block;
+  background: linear-gradient(90deg, var(--color-surface-subtle) 25%, var(--color-border-subtle) 50%, var(--color-surface-subtle) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-kicker { width: 120px; height: 18px; }
+.skeleton-title { width: min(420px, 60vw); height: 42px; }
+.skeleton-button { width: 116px; height: 36px; }
+.skeleton-line { width: 100%; height: 18px; }
+.skeleton-line-wide { width: 92%; }
+.skeleton-line-short { width: 68%; }
+.skeleton-block { width: 100%; height: 220px; margin-top: var(--space-md); }
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (max-width: 639px) {
+  .lesson-loading-toolbar { align-items: flex-start; flex-direction: column; }
+  .lesson-loading-actions { width: 100%; }
+  .skeleton-button { flex: 1; }
+}
 .card-header {
   display: flex;
   align-items: center;

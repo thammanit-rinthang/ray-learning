@@ -2,17 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { requireUser } from "@/lib/auth";
-import { getReport, getReportIndex } from "@/lib/reports";
+import { getReport } from "@/lib/reports";
 import { ArrowLeft, HelpCircle, MessageSquare, BookOpen, Layers, Sparkles } from "lucide-react";
 
 export default async function LessonPage({ params }: { params: Promise<{ slug: string }> }) {
-  await requireUser();
   const { slug } = await params;
   const report = await getReport(slug);
   if (!report) notFound();
 
-  const courseLessons = (await getReportIndex()).filter((item) => item.course === report.item.course);
+  const courseLessons = report.courseLessons;
   const currentIndex = courseLessons.findIndex((item) => item.id === report.item.id);
   const previousLesson = currentIndex > 0 ? courseLessons[currentIndex - 1] : null;
   const nextLesson = currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1] : null;

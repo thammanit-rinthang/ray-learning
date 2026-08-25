@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { lessons } from "@/lib/db/schema";
@@ -39,10 +39,15 @@ const downloadReport = cache(async (reportPath: string) => {
 });
 
 export const getReport = cache(async (slug: string) => {
-  if (!db) return null;
-  const [lesson] = await db.select().from(lessons).where(eq(lessons.slug, slug)).limit(1);
-  if (!lesson) return null;
-  return { item: toIndexItem(lesson), content: await downloadReport(lesson.reportPath) };
+  const reportIndex = await getReportIndex();
+  const item = reportIndex.find((report) => report.slug === slug);
+  if (!item) return null;
+
+  return {
+    item,
+    content: await downloadReport(item.file),
+    courseLessons: reportIndex.filter((report) => report.course === item.course),
+  };
 });
 
 export const getReportsByIds = cache(async (ids: string[]) => {
