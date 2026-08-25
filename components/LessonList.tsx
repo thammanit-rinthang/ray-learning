@@ -95,73 +95,43 @@ export function LessonList({ initialReports }: LessonListProps) {
 
   function renderLessonCard(report: ReportIndexItem) {
     return (
-      <div key={report.id} className="card">
-        <div>
-          <div className="card-header">
-            <span className="badge badge-neutral">
-              <Layers size={11} />
-              {report.course}
-            </span>
-            {report.chapter && (
-              <span className="badge badge-neutral" style={{ maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {report.chapter}
-              </span>
-            )}
-          </div>
-          <Link href={`/lessons/${report.slug}`} style={{ textDecoration: "none" }}>
+      <article key={report.id} className="card lesson-card">
+        <Link
+          href={`/lessons/${report.slug}`}
+          className="lesson-card-main"
+          aria-label={`เปิดบทเรียน ${report.title}`}
+        >
+          <div>
+            <div className="card-header">
+              <span className="badge badge-neutral"><Layers size={11} />{report.course}</span>
+              {report.chapter && <span className="badge badge-neutral lesson-card-chapter">{report.chapter}</span>}
+            </div>
             <h2 className="card-title">{report.title}</h2>
+            <p className="lesson-card-hint">อ่านเนื้อหาบทเรียนและเอกสารประกอบ</p>
+          </div>
+          <div className="card-footer">
+            <span>กดเพื่อเปิดบทเรียน</span>
+            <span className="lesson-card-arrow"><ArrowRight size={15} /></span>
+          </div>
+        </Link>
+
+        <div className="lesson-card-actions" aria-label="การทำงานเพิ่มเติม">
+          <Link href={`/quiz?lesson=${report.id}&mode=existing`} className="btn btn-secondary btn-sm">
+            <HelpCircle size={15} />
+            <span>Existing Quiz</span>
+          </Link>
+          <Link href={`/quiz?lesson=${report.id}&mode=generate`} className="btn btn-secondary btn-sm">
+            <BookOpen size={15} />
+            <span>Generate Quiz</span>
+          </Link>
+          <Link href={`/chat?lesson=${report.id}`} className="btn btn-secondary btn-sm">
+            <MessageSquare size={15} />
+            <span>ถาม AI</span>
           </Link>
         </div>
-
-        <div>
-          <div style={{ display: "flex", gap: "6px", marginTop: "var(--space-sm)" }}>
-            <Link
-              href={`/lessons/${report.slug}`}
-              className="btn btn-primary btn-sm"
-              style={{ flex: 1 }}
-            >
-              <BookOpen size={14} />
-              <span>อ่านบทเรียน</span>
-            </Link>
-            <Link
-              href={`/quiz?lesson=${report.id}`}
-              className="btn btn-secondary btn-sm"
-              title="ทดสอบความเข้าใจ"
-              aria-label="ทดสอบความเข้าใจ"
-            >
-              <HelpCircle size={15} />
-            </Link>
-            <Link
-              href={`/chat?lesson=${report.id}`}
-              className="btn btn-secondary btn-sm"
-              title="ถาม AI บทนี้"
-              aria-label="ถาม AI บทนี้"
-            >
-              <MessageSquare size={15} />
-            </Link>
-          </div>
-
-          <div className="card-footer">
-            <span>เข้าถึงเอกสารได้ทันที</span>
-            <Link
-              href={`/lessons/${report.slug}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                color: "var(--color-text-primary)",
-                fontWeight: 600,
-              }}
-            >
-              <span>อ่าน</span>
-              <ArrowRight size={13} />
-            </Link>
-          </div>
-        </div>
-      </div>
+      </article>
     );
   }
-
   return (
     <div>
       {/* Stats Summary Bar */}

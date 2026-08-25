@@ -10,6 +10,7 @@ import {
 
 export const quizDifficulty = pgEnum("quiz_difficulty", ["easy", "medium", "hard"]);
 export const quizQuestionType = pgEnum("quiz_question_type", ["multiple_choice", "short_answer"]);
+export const quizType = pgEnum("quiz_type", ["existing", "generated"]);
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
@@ -37,6 +38,7 @@ export const quizzes = pgTable("quizzes", {
   title: text("title").notNull(),
   scopeType: text("scope_type").notNull(),
   scopeId: text("scope_id"),
+  type: quizType("type").notNull().default("existing"),
   difficulty: quizDifficulty("difficulty").notNull(),
   questionCount: integer("question_count").notNull(),
   createdBy: uuid("created_by").notNull().references(() => profiles.id),

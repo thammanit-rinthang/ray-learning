@@ -50,6 +50,7 @@ type SavedQuiz = {
   title: string;
   scopeType: string;
   scopeId?: string | null;
+  type: "existing" | "generated";
   difficulty: "easy" | "medium" | "hard";
   questionCount: number;
   createdAt: string;
@@ -67,7 +68,9 @@ function QuizContent() {
   const queryLesson = searchParams.get("lesson");
 
   // Mode: "list" (catalog of all quizzes), "create" (AI generator), "take" (answering questions)
-  const [mode, setMode] = useState<"list" | "create" | "take">(queryLesson ? "create" : "list");
+  const requestedMode = searchParams.get("mode");
+  const initialMode = queryLesson && requestedMode === "existing" ? "existing" : queryLesson ? "create" : "list";
+  const [mode, setMode] = useState<"list" | "existing" | "create" | "take">(initialMode);
 
   // Quizzes list state
   const [savedQuizzes, setSavedQuizzes] = useState<SavedQuiz[]>([]);
@@ -134,7 +137,7 @@ function QuizContent() {
           setReports(items);
           if (queryLesson && items.some((item) => item.id === queryLesson)) {
             setSelectedLessons([queryLesson]);
-            setMode("create");
+            setMode(requestedMode === "existing" ? "existing" : "create");
           }
         }
       })
@@ -145,7 +148,7 @@ function QuizContent() {
     return () => {
       active = false;
     };
-  }, [queryLesson]);
+  }, [queryLesson, requestedMode]);
 
   const courses = useMemo(() => {
     const set = new Set<string>();
@@ -200,7 +203,8 @@ function QuizContent() {
         matchStatus = q.attemptCount === 0;
       }
 
-      return matchDiff && matchSearch && matchCourse && matchStatus;
+      const matchLesson = !queryLesson || q.scopeId === queryLesson;
+      return matchLesson && matchDiff && matchSearch && matchCourse && matchStatus;
     });
 
     // 2. Sorting
@@ -227,7 +231,7 @@ function QuizContent() {
           return 0;
       }
     });
-  }, [savedQuizzes, difficultyFilter, quizSearch, courseFilter, statusFilter, sortBy, reportMap]);
+  }, [savedQuizzes, difficultyFilter, quizSearch, courseFilter, statusFilter, sortBy, reportMap, queryLesson]);
 
   // Grouped Quizzes by Lesson / Category
   const groupedQuizzes = useMemo(() => {
@@ -484,6 +488,7 @@ function QuizContent() {
           <div style={{ flex: 1, minWidth: "260px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
               {getDifficultyBadge(quiz.difficulty)}
+              <span className="badge badge-neutral">{quiz.type === "generated" ? "Generate Quiz" : "Existing Quiz"}</span>
               <span className="badge badge-dark">
                 {quiz.questionCount} ข้อ
               </span>
@@ -648,7 +653,7 @@ function QuizContent() {
   return (
     <div className="quiz-container" style={{ maxWidth: "960px", margin: "0 auto" }}>
       {/* 1. VIEW: ALL SAVED QUIZZES CATALOG */}
-      {mode === "list" && (
+      {(mode === "list" || mode === "existing") && (
         <div>
           {/* Header */}
           <section className="page-header-row">
@@ -656,9 +661,8 @@ function QuizContent() {
               <div className="eyebrow">
                 <span>Assessment Hub</span>
               </div>
-              <h1 style={{ marginTop: "0.4rem" }}>คลังแบบทดสอบทั้งหมด</h1>
-              <p className="description" style={{ marginTop: "0.4rem" }}>
-                เลือกทำแบบทดสอบแยกตามหมวดหมู่บทเรียน ดูประวัติคะแนน หรือสร้างชุดข้อสอบใหม่ด้วย AI
+              <h1 style={{ marginTop: "0.4rem" }}>{mode === "existing" ? "เลือกแบบทดสอบ" : "คลังแบบทดสอบทั้งหมด"}</h1>
+              <p className="description" style={{ marginTop: "0.4rem" }}>{mode === "existing" ? "ทำแบบทดสอบที่มีอยู่แล้วในระบบ" : "เลือกทำแบบทดสอบแยกตามหมวดหมู่บทเรียน ดูประวัติคะแนน หรือสร้างชุดข้อสอบใหม่ด้วย AI"}
               </p>
             </div>
             <button
