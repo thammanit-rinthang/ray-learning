@@ -4,20 +4,18 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Search,
-  BookOpen,
   HelpCircle,
   MessageSquare,
   ArrowRight,
+  ArrowLeft,
   BookMarked,
   Layers,
   GraduationCap,
-  FolderTree,
-  List,
+  Sparkles,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  ChevronsUpDown,
   X,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import type { ReportIndexItem } from "@/lib/reports";
 
@@ -25,37 +23,22 @@ interface LessonListProps {
   initialReports: ReportIndexItem[];
 }
 
+interface CourseSummary {
+  courseName: string;
+  items: ReportIndexItem[];
+  chapterCount: number;
+  matchingLessonsCount?: number;
+}
+
 export function LessonList({ initialReports }: LessonListProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
-  const [collapsedCourses, setCollapsedCourses] = useState<Record<string, boolean>>({});
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"courses" | "flat">("courses");
 
-  const courses = useMemo(() => {
-    const set = new Set<string>();
-    initialReports.forEach((r) => {
-      if (r.course) set.add(r.course);
-    });
-    return Array.from(set);
-  }, [initialReports]);
-
-  const filteredReports = useMemo(() => {
-    return initialReports.filter((report) => {
-      const matchCourse = selectedCourse === "all" || report.course === selectedCourse;
-      const q = searchQuery.toLowerCase().trim();
-      const matchQuery =
-        !q ||
-        report.title.toLowerCase().includes(q) ||
-        report.course.toLowerCase().includes(q) ||
-        (report.chapter && report.chapter.toLowerCase().includes(q));
-      return matchCourse && matchQuery;
-    });
-  }, [initialReports, selectedCourse, searchQuery]);
-
-  // Group filtered reports by course
-  const groupedCourses = useMemo(() => {
+  // Group all reports by course
+  const coursesMap = useMemo<CourseSummary[]>(() => {
     const map = new Map<string, ReportIndexItem[]>();
-    filteredReports.forEach((report) => {
+    initialReports.forEach((report) => {
       const courseName = report.course || "วิชาทั่วไป";
       if (!map.has(courseName)) {
         map.set(courseName, []);
@@ -63,36 +46,82 @@ export function LessonList({ initialReports }: LessonListProps) {
       map.get(courseName)!.push(report);
     });
 
-    return Array.from(map.entries()).map(([courseName, items]) => ({
-      courseName,
-      items,
-    }));
-  }, [filteredReports]);
-
-  function toggleCourse(courseName: string) {
-    setCollapsedCourses((prev) => ({
-      ...prev,
-      [courseName]: !prev[courseName],
-    }));
-  }
-
-  function expandAll() {
-    setCollapsedCourses({});
-  }
-
-  function collapseAll() {
-    const allCollapsed: Record<string, boolean> = {};
-    groupedCourses.forEach((g) => {
-      allCollapsed[g.courseName] = true;
+    const summaries: CourseSummary[] = [];
+    map.forEach((items, courseName) => {
+      const chapters = new Set(items.map((i) => i.chapter).filter(Boolean));
+      summaries.push({
+        courseName,
+        items,
+        chapterCount: chapters.size,
+      });
     });
-    setCollapsedCourses(allCollapsed);
-  }
 
-  const allAreCollapsed = useMemo(() => {
-    if (groupedCourses.length === 0) return false;
-    return groupedCourses.every((g) => collapsedCourses[g.courseName]);
-  }, [groupedCourses, collapsedCourses]);
+    // Sort courses alphabetically
+    summaries.sort((a, b) => a.courseName.localeCompare(b.courseName));
+    return summaries;
+  }, [initialReports]);
 
+  // Filtered courses based on search query
+  const filteredCourses = useMemo<CourseSummary[]>(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return coursesMap;
+
+    const result: CourseSummary[] = [];
+    for (const c of coursesMap) {
+      const matchCourseName = c.courseName.toLowerCase().includes(q);
+      const matchingLessons = c.items.filter(
+        (item) =>
+          item.title.toLowerCase().includes(q) ||
+          (item.chapter && item.chapter.toLowerCase().includes(q))
+      );
+
+      if (matchCourseName || matchingLessons.length > 0) {
+        result.push({
+          ...c,
+          matchingLessonsCount: matchCourseName ? c.items.length : matchingLessons.length,
+        });
+      }
+    }
+    return result;
+  }, [coursesMap, searchQuery]);
+
+  // If a specific course is selected, get its lessons (with search filter applied)
+  const currentCourseData = useMemo(() => {
+    if (!selectedCourse) return null;
+    const course = coursesMap.find((c) => c.courseName === selectedCourse);
+    if (!course) return null;
+
+    const q = searchQuery.toLowerCase().trim();
+    const filteredItems = !q
+      ? course.items
+      : course.items.filter(
+          (item) =>
+            item.title.toLowerCase().includes(q) ||
+            (item.chapter && item.chapter.toLowerCase().includes(q)) ||
+            item.course.toLowerCase().includes(q)
+        );
+
+    return {
+      courseName: course.courseName,
+      totalItems: course.items,
+      filteredItems,
+      chapterCount: course.chapterCount,
+    };
+  }, [coursesMap, selectedCourse, searchQuery]);
+
+  // Flat lessons search (for "All Lessons" view)
+  const allFilteredLessons = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return initialReports;
+    return initialReports.filter(
+      (report) =>
+        report.title.toLowerCase().includes(q) ||
+        report.course.toLowerCase().includes(q) ||
+        (report.chapter && report.chapter.toLowerCase().includes(q))
+    );
+  }, [initialReports, searchQuery]);
+
+  // Render a single lesson card
   function renderLessonCard(report: ReportIndexItem) {
     return (
       <article key={report.id} className="card lesson-card">
@@ -103,72 +132,185 @@ export function LessonList({ initialReports }: LessonListProps) {
         >
           <div>
             <div className="card-header">
-              <span className="badge badge-neutral"><Layers size={11} />{report.course}</span>
-              {report.chapter && <span className="badge badge-neutral lesson-card-chapter">{report.chapter}</span>}
+              <span className="badge badge-neutral">
+                <Layers size={11} />
+                {report.course}
+              </span>
+              {report.chapter && (
+                <span className="badge badge-neutral lesson-card-chapter">
+                  {report.chapter}
+                </span>
+              )}
             </div>
-            <h2 className="card-title">{report.title}</h2>
+            <h3 className="card-title" style={{ fontSize: "var(--text-md)" }}>
+              {report.title}
+            </h3>
             <p className="lesson-card-hint">อ่านเนื้อหาบทเรียนและเอกสารประกอบ</p>
           </div>
           <div className="card-footer">
             <span>กดเพื่อเปิดบทเรียน</span>
-            <span className="lesson-card-arrow"><ArrowRight size={15} /></span>
+            <span className="lesson-card-arrow">
+              <ArrowRight size={15} />
+            </span>
           </div>
         </Link>
 
         <div className="lesson-card-actions" aria-label="การทำงานเพิ่มเติม">
-          <Link href={`/quiz?lesson=${report.id}&mode=existing`} className="btn btn-secondary btn-sm">
-            <HelpCircle size={15} />
+          <Link
+            href={`/quiz?lesson=${report.id}&mode=existing`}
+            className="btn btn-secondary btn-sm"
+          >
+            <HelpCircle size={14} />
             <span>Existing Quiz</span>
           </Link>
-          <Link href={`/quiz?lesson=${report.id}&mode=generate`} className="btn btn-secondary btn-sm">
-            <BookOpen size={15} />
+          <Link
+            href={`/quiz?lesson=${report.id}&mode=generate`}
+            className="btn btn-secondary btn-sm"
+          >
+            <Sparkles size={14} />
             <span>Generate Quiz</span>
           </Link>
-          <Link href={`/chat?lesson=${report.id}`} className="btn btn-secondary btn-sm">
-            <MessageSquare size={15} />
+          <Link
+            href={`/chat?lesson=${report.id}`}
+            className="btn btn-secondary btn-sm"
+          >
+            <MessageSquare size={14} />
             <span>ถาม AI</span>
           </Link>
         </div>
       </article>
     );
   }
-  return (
-    <div>
-      {/* Stats Summary Bar */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-label">หมวดหมู่วิชา (Courses)</span>
-          <span className="stat-value">{courses.length}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">บทเรียนทั้งหมด (Lessons)</span>
-          <span className="stat-value">{initialReports.length}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">ความพร้อมระบบ</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-            <CheckCircle2 size={15} style={{ color: "var(--color-success)" }} />
-            <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--color-success-text)" }}>
-              AI & Storage พร้อมใช้งาน
+
+  // If a course is selected: Show Course Detail View (List of Lessons in this course)
+  if (selectedCourse && currentCourseData) {
+    return (
+      <div>
+        {/* Navigation / Breadcrumb */}
+        <div className="course-detail-nav">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              setSelectedCourse(null);
+              setSearchQuery("");
+            }}
+            style={{
+              paddingLeft: 0,
+              gap: "6px",
+              color: "var(--color-text-secondary)",
+              fontWeight: 600,
+            }}
+          >
+            <ArrowLeft size={16} />
+            <span>กลับไปหน้ารวมหลักสูตร</span>
+          </button>
+
+          <div
+            style={{
+              fontSize: "var(--text-xs)",
+              color: "var(--color-text-tertiary)",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                setSelectedCourse(null);
+                setSearchQuery("");
+              }}
+            >
+              หลักสูตรทั้งหมด
+            </span>
+            <span>/</span>
+            <span style={{ color: "var(--color-text-primary)", fontWeight: 650 }}>
+              {currentCourseData.courseName}
             </span>
           </div>
         </div>
-      </div>
 
-      {/* Search & Filter Controls Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-md)",
-          marginBottom: "var(--space-xl)",
-          padding: "var(--space-md)",
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-lg)",
-        }}
-      >
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-md)", justifyContent: "space-between" }}>
+        {/* Course Banner */}
+        <section className="course-detail-banner">
+          <div className="course-detail-info">
+            <div className="course-detail-icon">
+              <GraduationCap size={28} />
+            </div>
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: "var(--text-xl)",
+                    fontWeight: 750,
+                    color: "var(--color-text-primary)",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {currentCourseData.courseName}
+                </h2>
+                <span
+                  className="badge badge-neutral"
+                  style={{
+                    color: "var(--color-pink-text)",
+                    borderColor: "var(--color-pink-border)",
+                  }}
+                >
+                  {currentCourseData.totalItems.length} บทเรียน
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: "var(--text-sm)",
+                  color: "var(--color-text-secondary)",
+                  marginTop: "4px",
+                }}
+              >
+                รวมบทเรียนและเอกสารประกอบการศึกษาของหลักสูตร {currentCourseData.courseName}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {currentCourseData.totalItems[0] && (
+              <Link
+                href={`/chat?lesson=${currentCourseData.totalItems[0].id}`}
+                className="btn btn-secondary btn-sm"
+              >
+                <MessageSquare size={15} />
+                <span>ถาม AI เกี่ยวกับวิชานี้</span>
+              </Link>
+            )}
+            {currentCourseData.totalItems[0] && (
+              <Link
+                href={`/quiz?lesson=${currentCourseData.totalItems[0].id}&mode=generate`}
+                className="btn btn-primary btn-sm"
+              >
+                <Sparkles size={15} />
+                <span>สร้าง Quiz วิชานี้</span>
+              </Link>
+            )}
+          </div>
+        </section>
+
+        {/* Filter / Search within Course */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "var(--space-md)",
+            justifyContent: "space-between",
+            marginBottom: "var(--space-lg)",
+          }}
+        >
           <div style={{ position: "relative", flex: 1, minWidth: "260px" }}>
             <Search
               size={18}
@@ -184,17 +326,164 @@ export function LessonList({ initialReports }: LessonListProps) {
               type="search"
               className="form-input"
               style={{ paddingLeft: "42px" }}
-              placeholder="ค้นหาชื่อบทเรียน, รหัสวิชา หรือหัวข้อ..."
+              placeholder={`ค้นหาบทเรียนใน ${currentCourseData.courseName}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--color-text-tertiary)",
+                  cursor: "pointer",
+                }}
+                aria-label="ล้างคำค้นหา"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)" }}>
+            แสดง {currentCourseData.filteredItems.length} จาก {currentCourseData.totalItems.length} บทเรียน
+          </span>
+        </div>
+
+        {/* Lessons Grid in Course */}
+        {currentCourseData.filteredItems.length > 0 ? (
+          <div className="card-grid">
+            {currentCourseData.filteredItems.map((report) => renderLessonCard(report))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Search size={24} />
+            </div>
+            <h3>ไม่พบบทเรียนที่ค้นหาในหลักสูตรนี้</h3>
+            <p className="description" style={{ textAlign: "center" }}>
+              ลองเปลี่ยนคำค้นหา หรือล้างตัวกรอง
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setSearchQuery("")}
+            >
+              ล้างคำค้นหา
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Top-Level Courses / All Lessons View
+  return (
+    <div>
+      {/* Stats Summary Bar */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span className="stat-label">หลักสูตรทั้งหมด (Courses)</span>
+          <span className="stat-value">{coursesMap.length}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">บทเรียนทั้งหมด (Lessons)</span>
+          <span className="stat-value">{initialReports.length}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">ความพร้อมระบบ</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+            <CheckCircle2 size={15} style={{ color: "var(--color-success)" }} />
+            <span
+              style={{
+                fontSize: "var(--text-sm)",
+                fontWeight: 600,
+                color: "var(--color-success-text)",
+              }}
+            >
+              AI & Storage พร้อมใช้งาน
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Search & View Mode Toolbar */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-md)",
+          marginBottom: "var(--space-xl)",
+          padding: "var(--space-md)",
+          background: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-lg)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "var(--space-md)",
+            justifyContent: "space-between",
+          }}
+        >
+          {/* Search Input */}
+          <div style={{ position: "relative", flex: 1, minWidth: "260px" }}>
+            <Search
+              size={18}
+              style={{
+                position: "absolute",
+                left: "14px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--color-text-tertiary)",
+              }}
+            />
+            <input
+              type="search"
+              className="form-input"
+              style={{ paddingLeft: "42px" }}
+              placeholder="ค้นหาชื่อหลักสูตร หรือชื่อบทเรียน..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--color-text-tertiary)",
+                  cursor: "pointer",
+                }}
+                aria-label="ล้างคำค้นหา"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           {/* View Mode Switcher */}
-          <div style={{ display: "flex", background: "var(--color-surface-subtle)", padding: "3px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)" }}>
+          <div
+            style={{
+              display: "flex",
+              background: "var(--color-surface-subtle)",
+              padding: "3px",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
             <button
               type="button"
-              onClick={() => setViewMode("grouped")}
+              onClick={() => setViewMode("courses")}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -205,14 +494,17 @@ export function LessonList({ initialReports }: LessonListProps) {
                 borderRadius: "var(--radius-sm)",
                 border: "none",
                 cursor: "pointer",
-                background: viewMode === "grouped" ? "var(--color-surface)" : "transparent",
-                color: viewMode === "grouped" ? "var(--color-pink-accent)" : "var(--color-text-secondary)",
-                boxShadow: viewMode === "grouped" ? "var(--shadow-xs)" : "none",
+                background: viewMode === "courses" ? "var(--color-surface)" : "transparent",
+                color:
+                  viewMode === "courses"
+                    ? "var(--color-pink-accent)"
+                    : "var(--color-text-secondary)",
+                boxShadow: viewMode === "courses" ? "var(--shadow-xs)" : "none",
                 transition: "all var(--dur-fast)",
               }}
             >
-              <FolderTree size={14} />
-              <span>แยกตามวิชา</span>
+              <LayoutGrid size={14} />
+              <span>รายชื่อหลักสูตร ({coursesMap.length})</span>
             </button>
             <button
               type="button"
@@ -228,211 +520,163 @@ export function LessonList({ initialReports }: LessonListProps) {
                 border: "none",
                 cursor: "pointer",
                 background: viewMode === "flat" ? "var(--color-surface)" : "transparent",
-                color: viewMode === "flat" ? "var(--color-pink-accent)" : "var(--color-text-secondary)",
+                color:
+                  viewMode === "flat"
+                    ? "var(--color-pink-accent)"
+                    : "var(--color-text-secondary)",
                 boxShadow: viewMode === "flat" ? "var(--shadow-xs)" : "none",
                 transition: "all var(--dur-fast)",
               }}
             >
               <List size={14} />
-              <span>แสดงทั้งหมด</span>
+              <span>บทเรียนทั้งหมด ({initialReports.length})</span>
             </button>
           </div>
-        </div>
-
-        {/* Course Filter Pills & Accordion Controls */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "var(--space-md)",
-            flexWrap: "wrap",
-            borderTop: "1px solid var(--color-border-subtle)",
-            paddingTop: "var(--space-xs)",
-          }}
-        >
-          {/* Filter Pills */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-xs)",
-              overflowX: "auto",
-              paddingBottom: "2px",
-              flex: 1,
-            }}
-          >
-            <button
-              type="button"
-              className={`btn btn-sm ${selectedCourse === "all" ? "btn-primary" : "btn-secondary"}`}
-              onClick={() => setSelectedCourse("all")}
-            >
-              ทุกวิชา ({initialReports.length})
-            </button>
-            {courses.map((course) => (
-              <button
-                key={course}
-                type="button"
-                className={`btn btn-sm ${selectedCourse === course ? "btn-primary" : "btn-secondary"}`}
-                onClick={() => setSelectedCourse(course)}
-              >
-                {course}
-              </button>
-            ))}
-          </div>
-
-          {/* Expand / Collapse All Controls (Only in grouped mode) */}
-          {viewMode === "grouped" && groupedCourses.length > 1 && (
-            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                style={{ fontSize: "var(--text-xs)", padding: "4px 8px" }}
-                onClick={allAreCollapsed ? expandAll : collapseAll}
-              >
-                <ChevronsUpDown size={14} />
-                <span>{allAreCollapsed ? "เปิดทุกวิชา" : "พับทุกวิชา"}</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Lesson Content: Grouped by Course (Accordion) or Flat */}
-      {filteredReports.length > 0 ? (
-        viewMode === "grouped" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-            {groupedCourses.map((group) => {
-              const isCollapsed = Boolean(collapsedCourses[group.courseName]);
+      {/* Content Rendering based on ViewMode */}
+      {viewMode === "courses" ? (
+        filteredCourses.length > 0 ? (
+          <div className="card-grid">
+            {filteredCourses.map((course) => (
+              <div
+                key={course.courseName}
+                className="course-card"
+                onClick={() => {
+                  setSelectedCourse(course.courseName);
+                  setSearchQuery("");
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedCourse(course.courseName);
+                    setSearchQuery("");
+                  }
+                }}
+                aria-label={`เปิดหลักสูตร ${course.courseName}`}
+              >
+                <div>
+                  <div className="course-card-header">
+                    <div className="course-card-icon">
+                      <GraduationCap size={22} />
+                    </div>
+                    <span
+                      className="badge badge-neutral"
+                      style={{
+                        color: "var(--color-pink-text)",
+                        borderColor: "var(--color-pink-border)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {course.items.length} บทเรียน
+                    </span>
+                  </div>
 
-              return (
-                <section
-                  key={group.courseName}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-xl)",
-                    overflow: "hidden",
-                    boxShadow: "var(--shadow-xs)",
-                    transition: "all var(--dur-fast) var(--ease-out)",
-                  }}
-                >
-                  {/* Course Accordion Header (Clickable) */}
-                  <button
-                    type="button"
-                    onClick={() => toggleCourse(group.courseName)}
+                  <h3 className="course-card-title">{course.courseName}</h3>
+                  <p
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "16px 20px",
-                      background: isCollapsed ? "var(--color-surface)" : "var(--color-surface-subtle)",
-                      border: "none",
-                      borderBottom: isCollapsed ? "none" : "1px solid var(--color-border)",
-                      cursor: "pointer",
-                      width: "100%",
-                      textAlign: "left",
-                      transition: "background-color var(--dur-fast)",
+                      fontSize: "var(--text-xs)",
+                      color: "var(--color-text-tertiary)",
+                      marginBottom: "var(--space-xs)",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div
-                        style={{
-                          display: "grid",
-                          placeItems: "center",
-                          width: "36px",
-                          height: "36px",
-                          borderRadius: "var(--radius-md)",
-                          background: "var(--color-primary)",
-                          color: "var(--color-primary-text)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <GraduationCap size={20} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.3 }}>
-                          {group.courseName}
-                        </div>
-                        <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-tertiary)", marginTop: "2px" }}>
-                          หลักสูตรรายวิชา · {group.items.length} บทเรียน
-                        </div>
-                      </div>
-                    </div>
+                    มีทั้งหมด {course.items.length} บทเรียน
+                    {course.chapterCount > 0 ? ` · ${course.chapterCount} บท` : ""}
+                  </p>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span className="badge badge-neutral" style={{ color: "var(--color-pink-text)", borderColor: "var(--color-pink-border)" }}>
-                        {group.items.length} บทเรียน
-                      </span>
-                      <div
-                        style={{
-                          display: "grid",
-                          placeItems: "center",
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          background: "var(--color-surface)",
-                          border: "1px solid var(--color-border)",
-                          color: "var(--color-text-secondary)",
-                        }}
+                  {/* Preview list of lessons */}
+                  <ul className="course-card-preview-list">
+                    {course.items.slice(0, 3).map((item) => (
+                      <li key={item.id} className="course-card-preview-item">
+                        <span className="course-card-preview-dot" />
+                        <span>
+                          {item.chapter ? `${item.chapter}: ` : ""}
+                          {item.title}
+                        </span>
+                      </li>
+                    ))}
+                    {course.items.length > 3 && (
+                      <li
+                        className="course-card-preview-item"
+                        style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}
                       >
-                        {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                      </div>
-                    </div>
-                  </button>
+                        <span>+ อีก {course.items.length - 3} บทเรียน</span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
 
-                  {/* Course Lessons Grid (Expandable Body) */}
-                  {!isCollapsed && (
-                    <div style={{ padding: "var(--space-lg)" }}>
-                      <div className="card-grid">
-                        {group.items.map((report) => renderLessonCard(report))}
-                      </div>
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+                <div className="course-card-footer">
+                  <span>คลิกเพื่อดูบทเรียนทั้งหมด</span>
+                  <span className="course-card-arrow">
+                    <ArrowRight size={15} />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : initialReports.length > 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Search size={24} />
+            </div>
+            <h3>ไม่พบหลักสูตรที่ค้นหา</h3>
+            <p className="description" style={{ textAlign: "center" }}>
+              ลองเปลี่ยนคำค้นหา หรือดูบทเรียนทั้งหมด
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setSearchQuery("")}
+            >
+              ล้างคำค้นหา
+            </button>
           </div>
         ) : (
-          <div className="card-grid">
-            {filteredReports.map((report) => renderLessonCard(report))}
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <BookMarked size={24} />
+            </div>
+            <h3>ยังไม่มีบทเรียนในระบบ</h3>
+            <p className="description" style={{ textAlign: "center" }}>
+              ไปที่หน้า Manage เพื่ออัปโหลดไฟล์ <code>report.md</code> เข้าสู่ระบบ
+            </p>
+            <Link
+              href="/manage"
+              className="btn btn-primary"
+              style={{ marginTop: "var(--space-sm)" }}
+            >
+              อัปโหลดบทเรียนแรก
+            </Link>
           </div>
         )
-      ) : initialReports.length > 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">
-            <Search size={24} />
-          </div>
-          <h3>ไม่พบบทเรียนที่ค้นหา</h3>
-          <p className="description" style={{ textAlign: "center" }}>
-            ลองเปลี่ยนคำค้นหา หรือเลือกดูบทเรียนทั้งหมด
-          </p>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setSearchQuery("");
-              setSelectedCourse("all");
-            }}
-          >
-            ล้างตัวกรอง
-          </button>
-        </div>
       ) : (
-        <div className="empty-state">
-          <div className="empty-state-icon">
-            <BookMarked size={24} />
+        /* Flat View of All Lessons */
+        allFilteredLessons.length > 0 ? (
+          <div className="card-grid">
+            {allFilteredLessons.map((report) => renderLessonCard(report))}
           </div>
-          <h3>ยังไม่มีบทเรียนในระบบ</h3>
-          <p className="description" style={{ textAlign: "center" }}>
-            ไปที่หน้า Manage เพื่ออัปโหลดไฟล์ <code>report.md</code> เข้าสู่ Supabase Storage
-          </p>
-          <Link href="/manage" className="btn btn-primary" style={{ marginTop: "var(--space-sm)" }}>
-            อัปโหลดบทเรียนแรก
-          </Link>
-        </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Search size={24} />
+            </div>
+            <h3>ไม่พบบทเรียนที่ค้นหา</h3>
+            <p className="description" style={{ textAlign: "center" }}>
+              ลองเปลี่ยนคำค้นหา หรือเลือกดูหลักสูตรทั้งหมด
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setSearchQuery("")}
+            >
+              ล้างคำค้นหา
+            </button>
+          </div>
+        )
       )}
     </div>
   );
